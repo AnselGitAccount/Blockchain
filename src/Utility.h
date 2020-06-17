@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #define DYNAMIC_ASSERT(boolian, errormsg)                \
     if (!boolian)                                        \
@@ -34,10 +35,17 @@ auto ComputeHash<std::string, std::size_t>(const unsigned index,
                                            const Typetime timestamp,
                                            const std::string data)
 {
-    return std::hash<std::string>()(data);
+    int64_t ts = timestamp.time_since_epoch().count();
+    std::size_t h = std::hash<unsigned>()(index) +
+                    std::hash<size_t>()(PreviousHash) +
+                    std::hash<int64_t>()(ts) +
+                    std::hash<std::string>()(data);
+    return h;
 }
 
-/* Count leading zero bits  */
+/* Count leading zero bits 
+ * http://aggregate.org/MAGIC/#Leading Zero Count
+ */
 template <typename Type>
 unsigned count_leading_zero_1(Type x)
 {
@@ -86,11 +94,11 @@ void PrintChain(const TypeChain *bchain, size_t strtpos = 0, size_t endpos = 0)
     }
 
     const auto* chain = bchain->getChain();
-    printf("       Previous hash                 Hash               Nounce\n");
+    printf("       Previous hash                 Hash               nonce\n");
     for (size_t i = strtpos; i <= endpos; i++)
     {
         printf("%20zu %20zu %20zu\n", (*chain)[i]->get_previoushash(),
-               (*chain)[i]->get_hash(), (*chain)[i]->get_nounce());
+               (*chain)[i]->get_hash(), (*chain)[i]->get_nonce());
     }
     std::cout << "Block #" << strtpos << " to Block #" << endpos
               << " out of total " << bchain->size() << " Blocks are printed.\n\n";
@@ -102,7 +110,7 @@ void PrintLastBlock(const TypeChain *bchain)
 {
     const auto* chain = bchain->getChain();
     printf("%20zu %20zu %20zu\n", chain->back()->get_previoushash(),
-           chain->back()->get_hash(), chain->back()->get_nounce());
+           chain->back()->get_hash(), chain->back()->get_nonce());
 }
 
 /*

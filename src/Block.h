@@ -7,19 +7,19 @@ template <typename Datatype, typename Hashtype>
 class Block
 {
 public:
-    Block(unsigned index, Hashtype previoushash, Typetime timestamp, Datatype data, Hashtype hash, size_t nounce) : index_(index),
+    Block(unsigned index, Hashtype previoushash, Typetime timestamp, Datatype data, Hashtype hash, size_t nonce) : index_(index),
                                                                                                                     previoushash_(previoushash),
                                                                                                                     timestamp_(timestamp),
                                                                                                                     data_(data),
                                                                                                                     hash_(hash),
-                                                                                                                    nounce_(nounce) {}
+                                                                                                                    nonce_(nonce) {}
 
-    auto get_index() { return index_; }
-    auto get_previoushash() { return previoushash_; }
-    auto get_timestamp() { return timestamp_; }
-    auto get_hash() { return hash_; }
-    auto get_data() { return data_; }
-    auto get_nounce() { return nounce_; }
+    const auto get_index() const { return index_; }
+    const auto get_previoushash() const { return previoushash_; }
+    const auto get_timestamp() const { return timestamp_; }
+    const auto get_hash() const { return hash_; }
+    const auto get_data() const { return data_; }
+    const auto get_nonce() const { return nonce_; }
 
 private:
     unsigned index_;
@@ -27,7 +27,7 @@ private:
     Typetime timestamp_;
     Datatype data_;
     Hashtype hash_;
-    size_t nounce_;
+    size_t nonce_;
 };
 
 template <typename Datatype, typename Hashtype>
@@ -58,43 +58,59 @@ public:
     // Requires a new message and previous block's data.
     void MiningNewBlock(const Datatype &data, Miner<Datatype, Hashtype> *worker)
     {
-        size_t newnounce = 0;
+        size_t newnonce = 0;
         Hashtype newhash;
-        auto *LastBlock = chain.back();
-        worker->Mine(LastBlock->get_index(), data, LastBlock->get_hash(), newhash, newnounce);
+        const auto &LastBlock = chain.back();
+        worker->Mine(LastBlock->get_index(), data, LastBlock->get_hash(), newhash, newnonce);
 
         auto *MinedBlock = new Block<Datatype, Hashtype>(
-            LastBlock->get_index() + 1, LastBlock->get_hash(), bclock::now(), data, newhash, newnounce);
+            LastBlock->get_index() + 1, LastBlock->get_hash(), bclock::now(), data, newhash, newnonce);
         // std::cout << newhash << " " << std::bitset<64>(newhash) << std::endl;
         this->AppendBlock(MinedBlock);
     }
 
     // Validate the integrity of blocks for appending to the chain.
-    void ValidateNewBlock(Block<Datatype, Hashtype> *NewBlock)
+    void ValidateNewBlock(const std::unique_ptr<const Block<Datatype, Hashtype>> &NewBlock)
     {
-        // Do nothing for first block in chain.
-        if (chain.size() > 0)
-        {
-            auto *LastBlock = chain.back();
-            if (LastBlock->get_index() + 1 != NewBlock->get_index())
-                std::cerr << "Block #" << NewBlock->get_index() << " is invalid due to invalid index.\n";
+        if (chain.size() < 1)
+            return;
 
-            // Simple validation rule: Hash of previous block matches PreviousHash of this block.
-            if (LastBlock->get_hash() != NewBlock->get_previoushash())
-                std::cerr << "Block #" << NewBlock->get_index() << " is invalid due to invalid previous-hash\n";
-        }
+        // Validate index.
+        const auto &LastBlock = chain.back();
+        if (LastBlock->get_index() + 1 != NewBlock->get_index())
+            std::cerr << "Block #" << NewBlock->get_index() << " is invalid due to invalid index.\n";
+
+        // Validate hash: Hash of previous block matches PreviousHash of this block.
+        if (LastBlock->get_hash() != NewBlock->get_previoushash())
+            std::cerr << "Block #" << NewBlock->get_index() << " is invalid due to invalid previous-hash.\n";
     }
 
-    /*
-    ValidateIncomingChain
-    ConflictResolution
-    */
+    // Validate Incoming Chain
+    // Conflict resolution:
+    //      If the incoming chain has the same length as mine, do nothing becuase it is not necessarily correct.
+    //      If the incoming chain is longer than mine, take the longer chain as truth.
+    bool ValidateIncomingChain(BlockChain<Datatype, Hashtype> *new_bchain)
+    {
+        if (chain.size() >= new_bchain->size()) 
+        {
+            // Incoming chain is shorter or equal, do nothing.
+            return false;
+        } else {
+            // Incoming chain is longer, replace the current chain with longer one.
+            chain = std::move(*(new_bchain->getChain()));
+        }
+    }
 
     // Append a block to my Chain.
     void AppendBlock(Block<Datatype, Hashtype> *new_block)
     {
+        auto nb = std::make_unique<const Block<Datatype, Hashtype>>(*new_block);
+        AppendBlock(nb);
+    }
+    void AppendBlock(std::unique_ptr<const Block<Datatype, Hashtype>> &new_block)
+    {
         ValidateNewBlock(new_block);
-        chain.push_back(new_block);
+        chain.push_back(std::move(new_block));
     }
 
     // Append another Chain to my Chain.
@@ -115,7 +131,7 @@ public:
     }
 
 private:
-    std::vector<Block<Datatype, Hashtype> *> chain;
+    std::vector<std::unique_ptr<const Block<Datatype, Hashtype>>> chain;
     std::string name;
 };
 
