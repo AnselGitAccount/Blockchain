@@ -1,6 +1,6 @@
 /* 
  * Author: Ansel Blumers
- * Date: Jan, 2018
+ * Last edit: June, 2020
  * 
  * https://ansel.braket.net
  */
@@ -33,17 +33,19 @@ int main(int argc, char **argv)
 
     // Mine a block in the Block-Chain
     Miner<std::string, size_t> *myworker = new Miner<std::string, size_t>(4);
-    printf("       Previous hash                 Hash               Nounce\n");
+    myworker->setleadingzeros(3);
+    printf("       Previous hash                 Hash               Nonce\n");
     for (int i = 0; i < 10; i++)
     {
         PrintLastBlock(myblockchain);
         myblockchain->MiningNewBlock("New message", myworker);
     }
+
 }
 
 /* TODO:
  * [X] 1. Overload hash comparison operator.
- * [ ] 2. Rewrite print functionality.
- * [ ] 3. Printf should be Hashtype dependent.
+ * [X] 2. Rewrite print functionality.
+ * [-] 3. Printf should be Hashtype dependent.
  * [ ] 4. Display Mining progress.
  */
