@@ -1,9 +1,16 @@
-# Blockchain
+# Blockchain in C++
 
+
+This repo contains a working blockchain implemented in C++. 
+
+## Prerequisites
+* Any C++ compiler with C++11 and after.
+
+## Tutorial
+* Visit my blog post. [Link](https://ansel.braket.net/archives/375)
+
+
+## Author & Contact
 > Ansel Blumers  
-> https://ansel.braket.net
-
-
-
-A minimal working example of Blockchain in C++.  
-I wrote it as a way to understand blockchain. Nothing fancy.
+> https://ansel.braket.net  
+> Email: ansel.blumers@gmail.com
